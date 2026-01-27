@@ -1,6 +1,7 @@
 import { createServerClient } from '@/lib/supabase/server';
 import { CreatePasteInput, Paste } from '@/lib/types/paste';
 import { Database } from '@/lib/types/database';
+import { DatabaseError, PasteNotFoundError } from '@/lib/utils/errors';
 
 // Test database connection
 export async function testDatabaseConnection(): Promise<boolean> {
@@ -30,11 +31,11 @@ export async function createPaste(input: CreatePasteInput): Promise<Paste> {
     .single();
 
   if (error) {
-    throw new Error(`Failed to create paste: ${error.message}`);
+    throw new DatabaseError(`Failed to create paste: ${error.message}`);
   }
 
   if (!data) {
-    throw new Error('Failed to create paste: No data returned');
+    throw new DatabaseError('Failed to create paste: No data returned');
   }
 
   return data as Paste;
@@ -53,7 +54,7 @@ export async function checkPasteAvailability(
   } as any);
 
   if (error) {
-    throw new Error(`Failed to check availability: ${error.message}`);
+    throw new DatabaseError(`Failed to check availability: ${error.message}`);
   }
 
   return data === true;
@@ -75,7 +76,11 @@ export async function getPasteAndIncrementViews(
     } as any
   );
 
-  if (incrementError || viewCount === -1) {
+  if (incrementError) {
+    throw new DatabaseError(`Failed to increment views: ${incrementError.message}`);
+  }
+  
+  if (viewCount === -1) {
     return null; // Paste unavailable or doesn't exist
   }
 
