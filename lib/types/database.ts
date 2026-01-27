@@ -29,6 +29,22 @@ export interface Database {
         };
       };
     };
+    Functions: {
+      is_paste_available: {
+        Args: {
+          paste_id: string;
+          test_now_ms?: number | null;
+        };
+        Returns: boolean;
+      };
+      increment_paste_views: {
+        Args: {
+          paste_id: string;
+          test_now_ms?: number | null;
+        };
+        Returns: number;
+      };
+    };
   };
 }
 
