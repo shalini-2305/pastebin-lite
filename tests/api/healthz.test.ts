@@ -30,7 +30,7 @@ describe('GET /api/healthz', () => {
     expect(testDatabaseConnection).toHaveBeenCalledOnce();
   });
 
-  it('should return ok: false with 503 status when database is unhealthy', async () => {
+  it('should return ok: false with 200 status when database is unhealthy', async () => {
     // Arrange
     vi.mocked(testDatabaseConnection).mockResolvedValue(false);
 
@@ -39,12 +39,13 @@ describe('GET /api/healthz', () => {
     const data = await response.json();
 
     // Assert
-    expect(response.status).toBe(503);
+    // Always returns 200 per requirements - health status is in 'ok' field
+    expect(response.status).toBe(200);
     expect(data).toEqual({ ok: false });
     expect(testDatabaseConnection).toHaveBeenCalledOnce();
   });
 
-  it('should return ok: false with 503 status when database connection throws error', async () => {
+  it('should return ok: false with 200 status when database connection throws error', async () => {
     // Arrange
     vi.mocked(testDatabaseConnection).mockRejectedValue(
       new Error('Database connection failed')
@@ -55,7 +56,8 @@ describe('GET /api/healthz', () => {
     const data = await response.json();
 
     // Assert
-    expect(response.status).toBe(503);
+    // Always returns 200 per requirements - health status is in 'ok' field
+    expect(response.status).toBe(200);
     expect(data).toEqual({ ok: false });
   });
 });
