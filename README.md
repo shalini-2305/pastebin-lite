@@ -46,7 +46,7 @@ Create a `.env.local` file in the project root:
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
 
-# Application URL (optional - defaults to http://localhost:3000)
+# Application URL (REQUIRED for production, use http://localhost:3000 for local development)
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 # Test Mode (optional - set to '1' to enable TEST_MODE)

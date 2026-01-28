@@ -60,7 +60,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate paste URL
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    if (!appUrl) {
+      console.error('NEXT_PUBLIC_APP_URL environment variable is not set');
+      return NextResponse.json(
+        {
+          error: 'Configuration error',
+          message: 'Application URL is not configured',
+        },
+        { status: 500 }
+      );
+    }
     const url = `${appUrl}/p/${paste.id}`;
 
     const response: CreatePasteResponse = {
