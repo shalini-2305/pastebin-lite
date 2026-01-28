@@ -5,14 +5,15 @@
 
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { Database } from '@/lib/types/database';
 
 const MIGRATION_FILE = join(process.cwd(), 'supabase', 'migrations', '001_initial_schema.sql');
 
 /**
  * Check if the pastes table exists
  */
-async function tableExists(supabase: ReturnType<typeof createClient>): Promise<boolean> {
+async function tableExists(supabase: SupabaseClient<Database>): Promise<boolean> {
   try {
     // Try to query the table - if it exists, this will succeed
     const { error } = await supabase
@@ -47,7 +48,7 @@ async function runMigrationWithServiceRole(): Promise<boolean> {
 
   try {
     // Create admin client with service role key
-    const adminClient = createClient(supabaseUrl, serviceRoleKey, {
+    const adminClient = createClient<Database>(supabaseUrl, serviceRoleKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
@@ -83,7 +84,7 @@ export async function checkSchemaExists(): Promise<boolean> {
       return false;
     }
 
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
     return await tableExists(supabase);
   } catch (error) {
     console.error('Error checking schema:', error);
