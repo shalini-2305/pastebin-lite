@@ -60,17 +60,29 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate paste URL
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    // Try to get URL from environment variable first, then fallback to request headers
+    let appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    
     if (!appUrl) {
-      console.error('NEXT_PUBLIC_APP_URL environment variable is not set');
-      return NextResponse.json(
-        {
-          error: 'Configuration error',
-          message: 'Application URL is not configured',
-        },
-        { status: 500 }
-      );
+      // Fallback: construct URL from request headers (works in production)
+      const protocol = request.headers.get('x-forwarded-proto') || 'https';
+      const host = request.headers.get('host') || request.headers.get('x-forwarded-host');
+      
+      if (host) {
+        appUrl = `${protocol}://${host}`;
+      } else {
+        // Last resort: log error and use a placeholder
+        console.error('NEXT_PUBLIC_APP_URL environment variable is not set and could not determine URL from request headers');
+        return NextResponse.json(
+          {
+            error: 'Configuration error',
+            message: 'Application URL is not configured. Please set NEXT_PUBLIC_APP_URL environment variable.',
+          },
+          { status: 500 }
+        );
+      }
     }
+    
     const url = `${appUrl}/p/${paste.id}`;
 
     const response: CreatePasteResponse = {

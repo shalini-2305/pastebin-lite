@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Pastebin-lite",
-  description: "Pastebin-lite is a simple pastebin service",
+  title: "Pastebin-Lite",
+  description: "Pastebin-Lite is a simple pastebin service",
 };
 
 export default function RootLayout({
