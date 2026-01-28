@@ -62,17 +62,39 @@ TEST_MODE=0
 
 ### 4. Set Up the Database
 
+The database schema needs to be set up once. Choose one of these methods:
+
+**Option 1: Automatic Setup (Recommended for first-time setup)**
+
+If you have `SUPABASE_SERVICE_ROLE_KEY` set in your environment:
+
+```bash
+npm run setup-db
+```
+
+This will automatically create the database schema.
+
+**Option 2: Supabase Dashboard**
+
 1. Go to your Supabase Dashboard → **SQL Editor**
 2. Create a new query
 3. Copy and paste the contents of `supabase/migrations/001_initial_schema.sql`
 4. Run the migration
 
-Alternatively, you can use the Supabase CLI:
+**Option 3: Supabase CLI**
 
 ```bash
-# If you have Supabase CLI installed
+# Install Supabase CLI (if not already installed)
+npm install -g supabase
+
+# Link your project
+supabase link --project-ref YOUR_PROJECT_REF
+
+# Run migration
 supabase db push
 ```
+
+**Note:** Database migrations are a one-time setup. Once the schema is created, it persists and no further migration steps are needed for subsequent deployments.
 
 ### 5. Run the Development Server
 
@@ -291,8 +313,12 @@ pastebin-lite/
      - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Your Supabase anon key
      - `NEXT_PUBLIC_APP_URL` - Your Vercel deployment URL (e.g., `https://your-app.vercel.app`)
      - `TEST_MODE` - Set to `0` for production, `1` for testing
+     - `SUPABASE_SERVICE_ROLE_KEY` (optional) - For automatic database setup
 
-4. **Ensure Database Migration** has been run in Supabase
+4. **Database Setup** (One-time only):
+   - If `SUPABASE_SERVICE_ROLE_KEY` is set, migrations will run automatically during build
+   - Otherwise, run the migration once via Supabase Dashboard (see Local Setup step 4)
+   - **Note:** Once the database schema is created, it persists. No migration is needed for subsequent deployments.
 
 5. **Redeploy** if you added environment variables after initial deployment
 
@@ -341,10 +367,13 @@ The expiry logic will use the header time instead of the system time, allowing y
 
 ### Available Scripts
 
+- `npm install` - Install dependencies
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
 - `npm run start` - Start production server
 - `npm run lint` - Run ESLint
+- `npm run setup-db` - Set up database schema (requires SUPABASE_SERVICE_ROLE_KEY)
+- `npm run check-migrations` - Check if database schema exists
 
 ### Code Style
 

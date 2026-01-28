@@ -10,7 +10,9 @@
     "test": "vitest",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest --coverage",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --ui",
+    "setup-db": "tsx scripts/setup-database.ts",
+    "check-migrations": "tsx scripts/check-migrations.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.47.10",
@@ -31,6 +33,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.5",
     "tailwindcss": "^4",
+    "tsx": "^4.19.2",
     "typescript": "^5",
     "vitest": "^2.1.8"
   }
