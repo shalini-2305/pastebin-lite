@@ -13,8 +13,8 @@ export async function GET() {
       timestamp: new Date().toISOString(),
     };
 
-    // Validate response with schema
-    const validatedResponse = healthCheckResponseSchema.parse({
+    // Validate response with schema (ensures response matches expected format)
+    healthCheckResponseSchema.parse({
       ok: response.ok,
     });
 
