@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getPasteAndIncrementViews } from '@/lib/db/pastes';
+import { getPasteAndIncrementViews, getPasteUnavailabilityReason } from '@/lib/db/pastes';
 import { PasteResponse } from '@/lib/types/paste';
 import { getTestTime } from '@/lib/utils/test-mode';
 import { pasteIdSchema } from '@/lib/schemas/paste';
@@ -58,10 +58,35 @@ export async function GET(
 
     // Check if paste was found and is available
     if (!paste) {
+      // Determine the specific reason why paste is unavailable
+      const unavailabilityInfo = await getPasteUnavailabilityReason(
+        id,
+        testNowMs ?? undefined
+      );
+
+      let errorMessage: string;
+      switch (unavailabilityInfo.reason) {
+        case 'expired':
+          errorMessage = unavailabilityInfo.paste?.expires_at
+            ? `This paste expired on ${new Date(unavailabilityInfo.paste.expires_at).toLocaleString()}`
+            : 'This paste has expired and is no longer available.';
+          break;
+        case 'max_views_reached':
+          errorMessage = unavailabilityInfo.paste?.max_views !== null && unavailabilityInfo.paste?.view_count !== undefined
+            ? `This paste has reached its maximum view limit of ${unavailabilityInfo.paste.max_views} views (currently at ${unavailabilityInfo.paste.view_count} views).`
+            : 'This paste has reached its maximum view limit.';
+          break;
+        case 'not_found':
+        default:
+          errorMessage = 'This paste does not exist or has been deleted.';
+          break;
+      }
+
       return NextResponse.json(
         {
-          error: 'Paste not found',
-          message: 'Paste not found or unavailable (expired or view limit reached)',
+          error: unavailabilityInfo.reason === 'not_found' ? 'Paste not found' : 'Paste unavailable',
+          message: errorMessage,
+          reason: unavailabilityInfo.reason,
         },
         { status: 404 }
       );

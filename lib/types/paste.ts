@@ -32,3 +32,14 @@ export interface HealthCheckResponse {
   ok: boolean;
 }
 
+// Unavailability reason types
+export type PasteUnavailabilityReason = 
+  | 'not_found'
+  | 'expired'
+  | 'max_views_reached';
+
+export interface PasteUnavailabilityInfo {
+  reason: PasteUnavailabilityReason;
+  paste?: Paste | null; // Paste data if it exists but is unavailable
+}
+

@@ -1,8 +1,9 @@
 import { notFound } from 'next/navigation';
 import { headers } from 'next/headers';
 import Link from 'next/link';
-import { getPasteAndIncrementViews } from '@/lib/db/pastes';
+import { getPasteAndIncrementViews, getPasteUnavailabilityReason } from '@/lib/db/pastes';
 import { pasteIdSchema } from '@/lib/schemas/paste';
+import Unavailable from './unavailable';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -44,9 +45,21 @@ export default async function PastePage({ params }: PageProps) {
     notFound();
   }
 
-  // If paste not found or unavailable, show 404
+  // If paste not found or unavailable, determine the reason and show specific error
   if (!paste) {
-    notFound();
+    const unavailabilityInfo = await getPasteUnavailabilityReason(
+      id,
+      testNowMs ?? undefined
+    );
+    
+    return (
+      <Unavailable
+        reason={unavailabilityInfo.reason}
+        expiresAt={unavailabilityInfo.paste?.expires_at}
+        maxViews={unavailabilityInfo.paste?.max_views}
+        viewCount={unavailabilityInfo.paste?.view_count}
+      />
+    );
   }
 
   // Calculate remaining views for display

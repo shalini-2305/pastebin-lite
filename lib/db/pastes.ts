@@ -125,3 +125,54 @@ export async function getPaste(
   return data as Paste;
 }
 
+// Get paste without availability checks (for determining unavailability reason)
+export async function getPasteRaw(
+  id: string
+): Promise<Paste | null> {
+  const supabase = createServerClient();
+  
+  const { data, error } = await supabase
+    .from('pastes')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return data as Paste;
+}
+
+// Determine why a paste is unavailable
+export async function getPasteUnavailabilityReason(
+  id: string,
+  testNowMs?: number
+): Promise<{ reason: 'not_found' | 'expired' | 'max_views_reached'; paste?: Paste | null }> {
+  const paste = await getPasteRaw(id);
+  
+  // Paste doesn't exist
+  if (!paste) {
+    return { reason: 'not_found' };
+  }
+
+  // Determine current time
+  const now = testNowMs ? new Date(testNowMs) : new Date();
+  
+  // Check if expired
+  if (paste.expires_at) {
+    const expiresAt = new Date(paste.expires_at);
+    if (now >= expiresAt) {
+      return { reason: 'expired', paste };
+    }
+  }
+
+  // Check if max views reached
+  if (paste.max_views !== null && paste.view_count >= paste.max_views) {
+    return { reason: 'max_views_reached', paste };
+  }
+
+  // Should not reach here if paste is unavailable, but return not_found as fallback
+  return { reason: 'not_found', paste };
+}
+
