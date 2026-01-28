@@ -151,6 +151,13 @@ export default function Unavailable({
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex items-center justify-center p-4 sm:p-8">
       <div className="text-center max-w-lg w-full">
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-slate-900/50 border-2 border-slate-200 dark:border-slate-700 p-8 sm:p-12">
+          {/* 404 Status Code */}
+          <div className="mb-6">
+            <span className="text-4xl sm:text-5xl font-bold text-slate-400 dark:text-slate-600">
+              404
+            </span>
+          </div>
+          
           {/* Title */}
           <h1 className="text-3xl sm:text-4xl font-bold mb-4 bg-gradient-to-r from-slate-900 to-slate-700 dark:from-slate-100 dark:to-slate-300 bg-clip-text text-transparent">
             {getTitle()}

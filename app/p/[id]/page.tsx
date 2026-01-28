@@ -47,21 +47,9 @@ export default async function PastePage({ params }: PageProps) {
     notFound();
   }
 
-  // If paste not found or unavailable, determine the reason and show specific error
+  // If paste not found or unavailable, return 404
   if (!paste) {
-    const unavailabilityInfo = await getPasteUnavailabilityReason(
-      id,
-      testNowMs ?? undefined
-    );
-    
-    return (
-      <Unavailable
-        reason={unavailabilityInfo.reason}
-        expiresAt={unavailabilityInfo.paste?.expires_at}
-        maxViews={unavailabilityInfo.paste?.max_views}
-        viewCount={unavailabilityInfo.paste?.view_count}
-      />
-    );
+    notFound();
   }
 
   // Calculate remaining views for display
