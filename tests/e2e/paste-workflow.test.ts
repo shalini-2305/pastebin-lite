@@ -7,13 +7,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { POST } from '@/app/api/pastes/route';
 import { GET } from '@/app/api/pastes/[id]/route';
-import { createPaste, getPasteAndIncrementViews } from '@/lib/db/pastes';
+import { createPaste, getPasteAndIncrementViews, getPasteUnavailabilityReason } from '@/lib/db/pastes';
 import { createMockRequest, getJsonResponse } from '../utils/test-helpers';
 
 // Mock the database functions
 vi.mock('@/lib/db/pastes', () => ({
   createPaste: vi.fn(),
   getPasteAndIncrementViews: vi.fn(),
+  getPasteUnavailabilityReason: vi.fn(),
 }));
 
 describe('End-to-End Paste Workflow', () => {
@@ -63,7 +64,7 @@ describe('End-to-End Paste Workflow', () => {
     } as any);
 
     const firstViewRequest = createMockRequest(`http://localhost:3000/api/pastes/${pasteId}`);
-    const firstViewResponse = await GET(firstViewRequest, { params: { id: pasteId } });
+    const firstViewResponse = await GET(firstViewRequest, { params: Promise.resolve({ id: pasteId }) });
     const firstViewData = await getJsonResponse(firstViewResponse);
 
     expect(firstViewResponse.status).toBe(200);
@@ -80,7 +81,7 @@ describe('End-to-End Paste Workflow', () => {
     } as any);
 
     const secondViewRequest = createMockRequest(`http://localhost:3000/api/pastes/${pasteId}`);
-    const secondViewResponse = await GET(secondViewRequest, { params: { id: pasteId } });
+    const secondViewResponse = await GET(secondViewRequest, { params: Promise.resolve({ id: pasteId }) });
     const secondViewData = await getJsonResponse(secondViewResponse);
 
     expect(secondViewResponse.status).toBe(200);
@@ -123,7 +124,7 @@ describe('End-to-End Paste Workflow', () => {
 
     const firstView = await GET(
       createMockRequest(`http://localhost:3000/api/pastes/${pasteId}`),
-      { params: { id: pasteId } }
+      { params: Promise.resolve({ id: pasteId }) }
     );
     expect(firstView.status).toBe(200);
 
@@ -135,21 +136,29 @@ describe('End-to-End Paste Workflow', () => {
 
     const secondView = await GET(
       createMockRequest(`http://localhost:3000/api/pastes/${pasteId}`),
-      { params: { id: pasteId } }
+      { params: Promise.resolve({ id: pasteId }) }
     );
     expect(secondView.status).toBe(200);
 
     // Third view should fail
     vi.mocked(getPasteAndIncrementViews).mockResolvedValueOnce(null);
+    vi.mocked(getPasteUnavailabilityReason).mockResolvedValueOnce({
+      reason: 'max_views_reached',
+      paste: {
+        id: pasteId,
+        max_views: 2,
+        view_count: 2,
+      } as any,
+    });
 
     const thirdView = await GET(
       createMockRequest(`http://localhost:3000/api/pastes/${pasteId}`),
-      { params: { id: pasteId } }
+      { params: Promise.resolve({ id: pasteId }) }
     );
-    const thirdViewData = await getJsonResponse(thirdView);
+    const thirdViewData = await getJsonResponse<{ error: string; message?: string; reason?: string }>(thirdView);
 
     expect(thirdView.status).toBe(404);
-    expect(thirdViewData.error).toBe('Paste not found');
+    expect(thirdViewData.error).toBe('Paste unavailable');
   });
 
   it('should handle workflow with TTL expiry', async () => {
@@ -194,11 +203,18 @@ describe('End-to-End Paste Workflow', () => {
       }
     );
 
-    const beforeExpiry = await GET(beforeExpiryRequest, { params: { id: pasteId } });
+    const beforeExpiry = await GET(beforeExpiryRequest, { params: Promise.resolve({ id: pasteId }) });
     expect(beforeExpiry.status).toBe(200);
 
     // View after expiry
     vi.mocked(getPasteAndIncrementViews).mockResolvedValueOnce(null);
+    vi.mocked(getPasteUnavailabilityReason).mockResolvedValueOnce({
+      reason: 'expired',
+      paste: {
+        id: pasteId,
+        expires_at: new Date(testNowMs + 2000).toISOString(),
+      } as any,
+    });
 
     const afterExpiryRequest = new NextRequest(
       `http://localhost:3000/api/pastes/${pasteId}`,
@@ -209,11 +225,11 @@ describe('End-to-End Paste Workflow', () => {
       }
     );
 
-    const afterExpiry = await GET(afterExpiryRequest, { params: { id: pasteId } });
-    const afterExpiryData = await getJsonResponse(afterExpiry);
+    const afterExpiry = await GET(afterExpiryRequest, { params: Promise.resolve({ id: pasteId }) });
+    const afterExpiryData = await getJsonResponse<{ error: string; message?: string; reason?: string }>(afterExpiry);
 
     expect(afterExpiry.status).toBe(404);
-    expect(afterExpiryData.error).toBe('Paste not found');
+    expect(afterExpiryData.error).toBe('Paste unavailable');
   });
 });
 

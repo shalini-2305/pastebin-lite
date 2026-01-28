@@ -6,13 +6,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { GET } from '@/app/api/pastes/[id]/route';
-import { getPasteAndIncrementViews } from '@/lib/db/pastes';
+import { getPasteAndIncrementViews, getPasteUnavailabilityReason } from '@/lib/db/pastes';
 import { createMockRequest, createTestRequest, getJsonResponse } from '../utils/test-helpers';
 import { DatabaseError } from '@/lib/utils/errors';
 
 // Mock the database functions
 vi.mock('@/lib/db/pastes', () => ({
   getPasteAndIncrementViews: vi.fn(),
+  getPasteUnavailabilityReason: vi.fn(),
 }));
 
 describe('GET /api/pastes/:id', () => {
@@ -40,7 +41,7 @@ describe('GET /api/pastes/:id', () => {
     const request = createMockRequest(`http://localhost:3000/api/pastes/${pasteId}`);
 
     // Act
-    const response = await GET(request, { params: { id: pasteId } });
+    const response = await GET(request, { params: Promise.resolve({ id: pasteId }) });
     const data = await getJsonResponse(response);
 
     // Assert
@@ -70,7 +71,7 @@ describe('GET /api/pastes/:id', () => {
     const request = createMockRequest(`http://localhost:3000/api/pastes/${pasteId}`);
 
     // Act
-    const response = await GET(request, { params: { id: pasteId } });
+    const response = await GET(request, { params: Promise.resolve({ id: pasteId }) });
     const data = await getJsonResponse(response);
 
     // Assert
@@ -85,18 +86,22 @@ describe('GET /api/pastes/:id', () => {
   it('should return 404 when paste is not found', async () => {
     // Arrange
     vi.mocked(getPasteAndIncrementViews).mockResolvedValue(null);
+    vi.mocked(getPasteUnavailabilityReason).mockResolvedValue({
+      reason: 'not_found',
+    });
 
     const request = createMockRequest(`http://localhost:3000/api/pastes/${pasteId}`);
 
     // Act
-    const response = await GET(request, { params: { id: pasteId } });
+    const response = await GET(request, { params: Promise.resolve({ id: pasteId }) });
     const data = await getJsonResponse(response);
 
     // Assert
     expect(response.status).toBe(404);
     expect(data).toMatchObject({
       error: 'Paste not found',
-      message: expect.stringContaining('not found or unavailable'),
+      reason: 'not_found',
+      message: expect.stringContaining('does not exist or has been deleted'),
     });
   });
 
@@ -104,17 +109,27 @@ describe('GET /api/pastes/:id', () => {
     // Arrange
     // When view limit is reached, the function returns null
     vi.mocked(getPasteAndIncrementViews).mockResolvedValue(null);
+    vi.mocked(getPasteUnavailabilityReason).mockResolvedValue({
+      reason: 'max_views_reached',
+      paste: {
+        id: pasteId,
+        max_views: 5,
+        view_count: 5,
+      } as any,
+    });
 
     const request = createMockRequest(`http://localhost:3000/api/pastes/${pasteId}`);
 
     // Act
-    const response = await GET(request, { params: { id: pasteId } });
+    const response = await GET(request, { params: Promise.resolve({ id: pasteId }) });
     const data = await getJsonResponse(response);
 
     // Assert
     expect(response.status).toBe(404);
     expect(data).toMatchObject({
-      error: 'Paste not found',
+      error: 'Paste unavailable',
+      reason: 'max_views_reached',
+      message: expect.stringContaining('maximum view limit'),
     });
   });
 
@@ -122,17 +137,26 @@ describe('GET /api/pastes/:id', () => {
     // Arrange
     // When TTL expires, the function returns null
     vi.mocked(getPasteAndIncrementViews).mockResolvedValue(null);
+    vi.mocked(getPasteUnavailabilityReason).mockResolvedValue({
+      reason: 'expired',
+      paste: {
+        id: pasteId,
+        expires_at: new Date(Date.now() - 1000).toISOString(),
+      } as any,
+    });
 
     const request = createMockRequest(`http://localhost:3000/api/pastes/${pasteId}`);
 
     // Act
-    const response = await GET(request, { params: { id: pasteId } });
+    const response = await GET(request, { params: Promise.resolve({ id: pasteId }) });
     const data = await getJsonResponse(response);
 
     // Assert
     expect(response.status).toBe(404);
     expect(data).toMatchObject({
-      error: 'Paste not found',
+      error: 'Paste unavailable',
+      reason: 'expired',
+      message: expect.stringContaining('expired'),
     });
   });
 
@@ -142,7 +166,7 @@ describe('GET /api/pastes/:id', () => {
     const request = createMockRequest(`http://localhost:3000/api/pastes/${invalidId}`);
 
     // Act
-    const response = await GET(request, { params: { id: invalidId } });
+    const response = await GET(request, { params: Promise.resolve({ id: invalidId }) });
     const data = await getJsonResponse(response);
 
     // Assert
@@ -177,7 +201,7 @@ describe('GET /api/pastes/:id', () => {
     );
 
     // Act
-    const response = await GET(request, { params: { id: pasteId } });
+    const response = await GET(request, { params: Promise.resolve({ id: pasteId }) });
     const data = await getJsonResponse(response);
 
     // Assert
@@ -209,7 +233,7 @@ describe('GET /api/pastes/:id', () => {
     );
 
     // Act
-    const response = await GET(request, { params: { id: pasteId } });
+    const response = await GET(request, { params: Promise.resolve({ id: pasteId }) });
     const data = await getJsonResponse(response);
 
     // Assert
@@ -227,7 +251,7 @@ describe('GET /api/pastes/:id', () => {
     const request = createMockRequest(`http://localhost:3000/api/pastes/${pasteId}`);
 
     // Act
-    const response = await GET(request, { params: { id: pasteId } });
+    const response = await GET(request, { params: Promise.resolve({ id: pasteId }) });
     const data = await getJsonResponse(response);
 
     // Assert
@@ -255,7 +279,7 @@ describe('GET /api/pastes/:id', () => {
     const request = createMockRequest(`http://localhost:3000/api/pastes/${pasteId}`);
 
     // Act
-    const response = await GET(request, { params: { id: pasteId } });
+    const response = await GET(request, { params: Promise.resolve({ id: pasteId }) });
     const data = await getJsonResponse(response);
 
     // Assert
