@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
 import { CreatePasteResponse } from '@/lib/types/paste';
 
 export default function Home() {
@@ -10,7 +9,8 @@ export default function Home() {
   const [maxViews, setMaxViews] = useState<number | ''>('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
+  const [createdPaste, setCreatedPaste] = useState<CreatePasteResponse | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -56,12 +56,37 @@ export default function Home() {
         throw new Error('Invalid response from server');
       }
 
-      // Redirect to the paste URL
-      router.push(`/p/${pasteResponse.id}`);
+      // Store the created paste info and show copy button
+      setCreatedPaste(pasteResponse);
+      setLoading(false);
+      
+      // Reset form
+      setContent('');
+      setTtlSeconds('');
+      setMaxViews('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
       setLoading(false);
     }
+  };
+
+  const handleCopyLink = async () => {
+    if (!createdPaste) return;
+    
+    try {
+      await navigator.clipboard.writeText(createdPaste.url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy link:', err);
+      setError('Failed to copy link to clipboard');
+    }
+  };
+
+  const handleCreateNew = () => {
+    setCreatedPaste(null);
+    setCopied(false);
+    setError(null);
   };
 
   return (
@@ -196,6 +221,88 @@ export default function Home() {
                 </div>
               </div>
 
+              {/* Success Message */}
+              {createdPaste && (
+                <div
+                  role="alert"
+                  className="flex flex-col gap-3 p-4 bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800 rounded-xl text-green-800 dark:text-green-300"
+                >
+                  <div className="flex items-start gap-3">
+                    <svg
+                      className="w-5 h-5 mt-0.5 flex-shrink-0"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <div className="flex-1">
+                      <p className="font-medium">Paste created successfully!</p>
+                      <p className="text-sm mt-1">Your paste is ready to share. Copy the link below.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 pt-2 border-t border-green-200 dark:border-green-700">
+                    <input
+                      type="text"
+                      readOnly
+                      value={createdPaste.url}
+                      className="flex-1 px-3 py-2 bg-white dark:bg-slate-800 border border-green-300 dark:border-green-700 rounded-lg text-sm text-slate-900 dark:text-slate-50 font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleCopyLink}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-[#5BA3B0] hover:bg-[#4A9BA8] text-white rounded-lg text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[#5BA3B0] focus:ring-offset-2"
+                    >
+                      {copied ? (
+                        <>
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                          <span>Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                            />
+                          </svg>
+                          <span>Copy Link</span>
+                        </>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCreateNew}
+                      className="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
+                    >
+                      Create New
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Error Message */}
               {error && (
                 <div
@@ -224,7 +331,7 @@ export default function Home() {
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={loading || !content.trim()}
+                disabled={loading || !content.trim() || !!createdPaste}
                 className="w-full py-3.5 px-6 bg-[#5BA3B0] hover:bg-[#4A9BA8] text-white rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-[#CDE7EB]/30 flex items-center justify-center gap-2"
                 aria-busy={loading}
               >
